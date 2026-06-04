@@ -1,0 +1,10 @@
+# Ignore local PICO-8 backup files
+*.p8.bak
+*.bak
+
+# Ignore HTML/JS exports if you prefer to build them locally
+/export/
+
+# Ignore OS-specific system files
+.DS_Store
+Thumbs.db
