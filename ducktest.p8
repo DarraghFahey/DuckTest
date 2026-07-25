@@ -1,10 +1,6 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
-function objdraw(o)          --a basic function for drawing objects,
-    spr(o.spr, o.x, o.y, 1,1, playerflip)           --as long as those objects have spr, x, and y values inside
-end
-
 anims={                      --all character animations, described by name
  idle={fr=15,0,1},           --idle has a frame rate of 15, and loops between sprite #1 and #2 forever
  walk={fr=5,next="idle",2,3,4}, --a 3-image walk animation that returns to idle when done
@@ -20,50 +16,63 @@ function _init()
 end
 
 function _update()
-   -- if(btn(0)) player.x-=1 playerflip=true
-   -- if(btn(1)) player.x+=1 playerflip=false
-   -- if(btn(2)) player.y-=1 
-   -- if(btn(3)) player.y+=1
+    playerupdate(player)
 end
 
 function _draw()
     cls() 
     map()
-
+    spr(player.spr, player.x, player.y, 1,1, playerflip)
 end 
 
-function playerupdate(p)
-    local dx=0
-    if(btn(0)) dx-=1
-    if(btn(1)) dx+=1
-    p.x+=dx
-    if(p.state!="idle") then
-     if btnp(5) then p.play="punch" --you can only punch when not already punching
-     elseif dx<0 then p.left=true p.play="walk" --walking is lower priority than punching
-     elseif dx>0 then p.left=false p.play="walk"
-     else p.play="idle" end     --idle is lower priority than any other animation
-    end
-    local bx=(p.left and -4 or 4)
-    if(btnp(4)) newbullet(p.x+bx,64,4,4,2*sgn(bx),0)
-    for i=1,#objs do
-     if(i==nil) ?i.." is nil",0,120
-    end
-    animate(p)                  --you can animate any object just by setting play to something
-    return true                 --still alive, so return true
-   end
+function playerupdate(player)
+ local dx=0
+ local dy=0
+ if(btn(0)) dx-=1
+ if(btn(1)) dx+=1
+ if(btn(2)) dy-=1
+ if(btn(3)) dy+=1
+ player.x+=dx
+ player.y+=dy
+ if (player.state != "walk")  then
+  if dx<0 then playerflip=true player.play="walk"
+  elseif dx>0 then playerflip=false player.play="walk"
+  elseif dy<0 then player.y-=1 player.play="walk"
+  elseif dy>0 then player.y+=1 player.play="walk"
+  else player.play="idle" end
+ end
+ animate(player)              --you can animate any object just by setting play to something
+ return true                 --still alive, so return true
+end
 
 function animate(player)
-    
+ if player.state != player.play then   --start a new animation
+  player.state = player.play
+  player.animindex = 1            --start with the first frame in the animation table
+  player.time = 0                 --reset the timer
+ elseif #anims[player.state] > 1 then --continue playing an animation with multiple frames
+  player.time += 1
+  if player.time >= anims[player.state].fr then --the current frame has been on screen for long enough
+   player.time = 0
+   player.animindex = (player.animindex % #anims[player.state]) + 1 --go to the next frame
+   --this loops animations. "punch" becomes (current index % 3) + 1, so 1,2,3,1,2,3,1...
+   if player.animindex == 1 and anims[player.state].next then --at the moment the animation restarts,
+    player.play = anims[player.state].next                    --play something else instead
+    player.state = player.play
+   end
+  end
+ end
+ player.spr = anims[player.state][player.animindex] --lastly, update the current sprite number drawn to screen
 end
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000cccccccccccccccccccccccccccccccc0000000000000000
-00007770000000000000777000007770000077700000000000000000000000000000000000000000cccccccccccc3cccccccccc33ccccccc0000000000000000
-77007579000077707700757977007579770075790000000000000000000000000000000000000000ccccccccc3c333cc3333ccc33ccccccc0000000000000000
-77777770770075797777777077777770777777700000000000000000000000000000000000000000cccccc3333333333333333333333cccc0000000000000000
-07777770777777700777777007777770077777700000000000000000000000000000000000000000ccccc33333333333333333333333cccc0000000000000000
-07777000077777700777700007777000077770000000000000000000000000000000000000000000ccccc33333333333333333333333cccc0000000000000000
-09009000077770000909900009009000009990000000000000000000000000000000000000000000cccc33333333333333333333333333cc0000000000000000
-09909900099099000990000009909900000099000000000000000000000000000000000000000000cccc333333333333333333333333333c0000000000000000
+00000000000000000000000000000000000000003333333300000000000000000000000000000000cccccccccccccccccccccccccccccccc0000000000000000
+00007770000000000000777000007770000077703444433300000000000000000000000000000000cccccccccccc3cccccccccc33ccccccc0000000000000000
+77007579000077707700757977007579770075794ffff43300000000000000000000000000000000ccccccccc3c333cc3333ccc33ccccccc0000000000000000
+77777770770075797777777077777770777777704ffff43300000000000000000000000000000000cccccc3333333333333333333333cccc0000000000000000
+077777707777777007777770077777700777777034ff433300000000000000000000000000000000ccccc33333333333333333333333cccc0000000000000000
+077770000777777007777000077770000777700034ff433300000000000000000000000000000000ccccc33333333333333333333333cccc0000000000000000
+09009000077770000909900009009000009990003444433300000000000000000000000000000000cccc33333333333333333333333333cc0000000000000000
+09909900099099000990000009909900000099003333333300000000000000000000000000000000cccc333333333333333333333333333c0000000000000000
 00000000000000000000000000000000333333330000000000000000000000000000000000000000ccccc3333333333333333333333333cc0000000000000000
 00000000000000000000000000000000344443330000000000000000000000000000000000000000ccccc33333333333333333333333cccc0000000000000000
 000000000000000000000000000000004ffff4330000000000000000000000000000000000000000ccccc3333333333333333333333333cc0000000000000000
